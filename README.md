@@ -40,7 +40,7 @@ namespace Demo
 
         static void Main(string[] args)
         {
-            DateTime StartTime = DateTime.Now;
+            DateTime startTime = DateTime.Now;
             LibALAC.Encoder.Initialize(SampleRate, Channels, BitsPerSample, FramesPerPacket, false);
             LibALAC.Decoder.Initialize(SampleRate, Channels, BitsPerSample, FramesPerPacket);
             using (IWaveSource waveSource = CodecFactory.Instance.GetCodec(FileName))
@@ -63,13 +63,18 @@ namespace Demo
             }
             LibALAC.Encoder.Finish();
             LibALAC.Decoder.Finish();
-            Console.WriteLine("Encoding/Decoding-Time: " + DateTime.Now.Subtract(StartTime));
+            Console.WriteLine("Encoding/Decoding-Time: " + DateTime.Now.Subtract(startTime));
             Console.ReadLine();
         }
     }
 }
 ```
-	
+
+### Why is LibALAC static? ###
+
+The official [ALAC codec](https://github.com/macosforge/alac) developed by Apple uses native C/C++ code resulting in an very fast but unmanaged LibALAC-DLL.
+This cannot easily wrapped in an non-static managed code for .NET.
+
 ### License ###
 	
 All sources are available under the Apache license 2.0.
