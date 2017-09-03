@@ -46,17 +46,15 @@ namespace LibALAC
         ///     Converts an Apple Lossless audio packet into raw PCM output data.
         /// </summary>
         /// <param name="data">The data source.</param>
-        /// <param name="len">Length of input data in bytes.</param>
-        public static byte[] Decode(byte[] data, int len)
+        /// <param name="count">Length of input data in bytes.</param>
+        public static byte[] Decode(byte[] data, int count)
         {
-            if (len < data.Length)
-                Array.Resize(ref data, len);
             byte[] buffer = new byte[DecoderBytesPerPacket];
-            int result = Is64BitProcess ? Decode64(data, buffer, ref len) : Decode32(data, buffer, ref len);
+            int result = Is64BitProcess ? Decode64(data, buffer, ref count) : Decode32(data, buffer, ref count);
             if (result != 0)
                 throw new LibALACException("Decode failed.");
-            if (len < DecoderBytesPerPacket)
-                Array.Resize(ref buffer, len);
+            if (count < DecoderBytesPerPacket)
+                Array.Resize(ref buffer, count);
             return buffer;
         }
 
@@ -67,6 +65,19 @@ namespace LibALAC
         public static byte[] Decode(byte[] data)
         {
             return Decode(data, data.Length);
+        }
+
+        /// <summary>
+        ///     Converts an Apple Lossless audio packet into raw PCM output data.
+        /// </summary>
+        /// <param name="data">The data source.</param>
+        /// <param name="offset">Input offset in bytes.</param>
+        /// <param name="count">Length of input data in bytes.</param>
+        public static byte[] Decode(byte[] data, int offset, int count)
+        {
+            byte[] buffer = new byte[count];
+            Buffer.BlockCopy(data, offset, buffer, 0, count);
+            return Decode(buffer, count);
         }
 
         /// <summary>
