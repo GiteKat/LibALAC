@@ -81,6 +81,8 @@ namespace LibALAC
         /// <param name="len">Length of input data in bytes.</param>
         public static byte[] Encode(byte[] data, int len)
         {
+            if (len < data.Length)
+                Array.Resize(ref data, len);
             byte[] buffer = new byte[len + 7];
             int result = Is64BitProcess ? Encode64(data, buffer, ref len) : Encode32(data, buffer, ref len);
             if (result != 0)

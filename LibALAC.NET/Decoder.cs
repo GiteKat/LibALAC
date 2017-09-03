@@ -49,6 +49,8 @@ namespace LibALAC
         /// <param name="len">Length of input data in bytes.</param>
         public static byte[] Decode(byte[] data, int len)
         {
+            if (len < data.Length)
+                Array.Resize(ref data, len);
             byte[] buffer = new byte[DecoderBytesPerPacket];
             int result = Is64BitProcess ? Decode64(data, buffer, ref len) : Decode32(data, buffer, ref len);
             if (result != 0)
