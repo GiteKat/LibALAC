@@ -1,0 +1,27 @@
+<?xml version="1.0"?>
+<package >
+  <metadata>
+    <id>LibALAC</id>
+    <version>1.0.0</version>
+    <title>LibALAC</title>
+    <authors>GiteKat</authors>
+    <owners>GiteKat</owners>
+    <licenseUrl>https://www.apache.org/licenses/LICENSE-2.0</licenseUrl>
+    <projectUrl>https://github.com/GiteKat/LibALAC</projectUrl>
+    <requireLicenseAcceptance>false</requireLicenseAcceptance>
+    <description>.NET standard wrapper for the native dynamic-link library (DLL) implementation of the Apple Lossless Audio Codec (ALAC).</description>
+    <releaseNotes>Mirror copy of the ALAC encoder and decoder from http://alac.macosforge.org/ with changes for compiling as DLL in Visual Studio 2017.</releaseNotes>
+    <copyright>Copyright 2011–2017 Apple Inc. and contributors</copyright>
+    <tags>ALAC Encoder Decoder .NET Apple Lossless Audio Codec</tags>
+    <references>
+      <reference file="LibALAC.dll" />
+    </references>
+  </metadata>
+  <files>
+    <file src="bin\Release\netstandard1.1\LibALAC.dll" target="lib\netstandard1.1" />
+    <file src="bin\Release\netstandard1.1\LibALAC.xml" target="lib\netstandard1.1" />
+    <file src="..\LibALAC\Release\Win32\LibALAC32.dll" target="build" />
+    <file src="..\LibALAC\Release\x64\LibALAC64.dll" target="build" />
+    <file src="LibALAC.targets" target="build" />
+  </files>
+</package>
