@@ -78,15 +78,24 @@ namespace LibALAC
         ///     Converts raw PCM input data into an Apple Lossless audio packet.
         /// </summary>
         /// <param name="data">The data source.</param>
-        public static byte[] Encode(byte[] data)
+        /// <param name="len">Length of input data in bytes.</param>
+        public static byte[] Encode(byte[] data, int len)
         {
-            int len = data.Length;
             byte[] buffer = new byte[len + 7];
             int result = Is64BitProcess ? Encode64(data, buffer, ref len) : Encode32(data, buffer, ref len);
             if (result != 0)
                throw new LibALACException("Encode failed.");
             Array.Resize(ref buffer, len);
             return buffer;
+        }
+
+        /// <summary>
+        ///     Converts raw PCM input data into an Apple Lossless audio packet.
+        /// </summary>
+        /// <param name="data">The data source.</param>
+        public static byte[] Encode(byte[] data)
+        {
+            return Encode(data, data.Length);
         }
 
         /// <summary>

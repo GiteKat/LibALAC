@@ -46,9 +46,9 @@ namespace LibALAC
         ///     Converts an Apple Lossless audio packet into raw PCM output data.
         /// </summary>
         /// <param name="data">The data source.</param>
-        public static byte[] Decode(byte[] data)
+        /// <param name="len">Length of input data in bytes.</param>
+        public static byte[] Decode(byte[] data, int len)
         {
-            int len = data.Length;
             byte[] buffer = new byte[DecoderBytesPerPacket];
             int result = Is64BitProcess ? Decode64(data, buffer, ref len) : Decode32(data, buffer, ref len);
             if (result != 0)
@@ -56,6 +56,15 @@ namespace LibALAC
             if (len < DecoderBytesPerPacket)
                 Array.Resize(ref buffer, len);
             return buffer;
+        }
+
+        /// <summary>
+        ///     Converts an Apple Lossless audio packet into raw PCM output data.
+        /// </summary>
+        /// <param name="data">The data source.</param>
+        public static byte[] Decode(byte[] data)
+        {
+            return Decode(data, data.Length);
         }
 
         /// <summary>
