@@ -73,7 +73,7 @@ namespace Demo
 ### Why is LibALAC static? ###
 
 The official [ALAC codec](https://github.com/macosforge/alac) developed by Apple uses native C/C++ code resulting in a very fast but unmanaged LibALAC-DLL.
-This cannot easily wrapped in a non-static managed code for .NET.
+This cannot easily wrapped in non-static, managed code for .NET.
 
 ### License ###
 	
