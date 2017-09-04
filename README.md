@@ -25,6 +25,7 @@ The following example show resampling, ALAC-encoding and decoding of a .mp3 inpu
 using CSCore;
 using CSCore.Codecs;
 using CSCore.DSP;
+using LibALAC;
 using System;
 using System.Linq;
 
@@ -41,8 +42,8 @@ namespace Demo
         static void Main(string[] args)
         {
             DateTime startTime = DateTime.Now;
-            LibALAC.Encoder encoder = new LibALAC.Encoder(SampleRate, Channels, BitsPerSample, FramesPerPacket);
-            LibALAC.Decoder decoder = new LibALAC.Decoder(SampleRate, Channels, BitsPerSample, FramesPerPacket);
+            Encoder encoder = new Encoder(SampleRate, Channels, BitsPerSample, FramesPerPacket);
+            Decoder decoder = new Decoder(SampleRate, Channels, BitsPerSample, FramesPerPacket);
             using (IWaveSource waveSource = CodecFactory.Instance.GetCodec(FileName))
             {
                 WaveFormat waveFormat = new WaveFormatExtensible(SampleRate, BitsPerSample, Channels, AudioSubTypes.Pcm);
@@ -61,6 +62,8 @@ namespace Demo
                     }
                 }
             }
+            encoder.Dispose();
+            decoder.Dispose();
             Console.WriteLine("Encoding/Decoding-Time: " + DateTime.Now.Subtract(startTime));
             Console.ReadLine();
         }
