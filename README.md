@@ -40,7 +40,7 @@ namespace Demo
 
         static void Main(string[] args)
         {
-            DateTime StartTime = DateTime.Now;
+            DateTime startTime = DateTime.Now;
             LibALAC.Encoder encoder = new LibALAC.Encoder(SampleRate, Channels, BitsPerSample, FramesPerPacket);
             LibALAC.Decoder decoder = new LibALAC.Decoder(SampleRate, Channels, BitsPerSample, FramesPerPacket);
             using (IWaveSource waveSource = CodecFactory.Instance.GetCodec(FileName))
@@ -61,7 +61,7 @@ namespace Demo
                     }
                 }
             }
-            Console.WriteLine("Encoding/Decoding-Time: " + DateTime.Now.Subtract(StartTime));
+            Console.WriteLine("Encoding/Decoding-Time: " + DateTime.Now.Subtract(startTime));
             Console.ReadLine();
         }
     }
