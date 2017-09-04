@@ -6,34 +6,37 @@ namespace LibALAC
     /// <summary>
     ///     .NET standard wrapper for the native dynamic-link library (DLL) implementation of the Apple Lossless Audio Codec (ALAC) encoder.
     /// </summary>
-    public static class Encoder
+    public class Encoder : IDisposable
     {
         [DllImport("LibALAC32.dll", EntryPoint = "InitializeEncoder", CallingConvention = CallingConvention.Cdecl)]
-        private static extern int InitializeEncoder32(int sampleRate, int channels, int bitsPerSample, int framesPerPacket, bool useFastMode);
+        private static extern IntPtr InitializeEncoder32(int sampleRate, int channels, int bitsPerSample, int framesPerPacket, bool useFastMode);
         [DllImport("LibALAC64.dll", EntryPoint = "InitializeEncoder", CallingConvention = CallingConvention.Cdecl)]
-        private static extern int InitializeEncoder64(int sampleRate, int channels, int bitsPerSample, int framesPerPacket, bool useFastMode);
+        private static extern IntPtr InitializeEncoder64(int sampleRate, int channels, int bitsPerSample, int framesPerPacket, bool useFastMode);
 
         [DllImport("LibALAC32.dll", EntryPoint = "GetMagicCookieSize", CallingConvention = CallingConvention.Cdecl)]
-        private static extern int GetMagicCookieSize32();
+        private static extern int GetMagicCookieSize32(IntPtr encoder);
         [DllImport("LibALAC64.dll", EntryPoint = "GetMagicCookieSize", CallingConvention = CallingConvention.Cdecl)]
-        private static extern int GetMagicCookieSize64();
+        private static extern int GetMagicCookieSize64(IntPtr encoder);
 
         [DllImport("LibALAC32.dll", EntryPoint = "GetMagicCookie", CallingConvention = CallingConvention.Cdecl)]
-        private static extern int GetMagicCookie32(byte[] outCookie);
+        private static extern int GetMagicCookie32(IntPtr encoder, byte[] outCookie);
         [DllImport("LibALAC64.dll", EntryPoint = "GetMagicCookie", CallingConvention = CallingConvention.Cdecl)]
-        private static extern int GetMagicCookie64(byte[] outCookie);
+        private static extern int GetMagicCookie64(IntPtr encoder, byte[] outCookie);
 
         [DllImport("LibALAC32.dll", EntryPoint = "Encode", CallingConvention = CallingConvention.Cdecl)]
-        private static extern int Encode32(byte[] readBuffer, byte[] writeBuffer, ref int ioNumBytes);
+        private static extern int Encode32(IntPtr encoder, byte[] readBuffer, byte[] writeBuffer, ref int ioNumBytes);
         [DllImport("LibALAC64.dll", EntryPoint = "Encode", CallingConvention = CallingConvention.Cdecl)]
-        private static extern int Encode64(byte[] readBuffer, byte[] writeBuffer, ref int ioNumBytes);
+        private static extern int Encode64(IntPtr encoder, byte[] readBuffer, byte[] writeBuffer, ref int ioNumBytes);
 
         [DllImport("LibALAC32.dll", EntryPoint = "FinishEncoder", CallingConvention = CallingConvention.Cdecl)]
-        private static extern int FinishEncoder32();
+        private static extern int FinishEncoder32(IntPtr encoder);
         [DllImport("LibALAC64.dll", EntryPoint = "FinishEncoder", CallingConvention = CallingConvention.Cdecl)]
-        private static extern int FinishEncoder64();
+        private static extern int FinishEncoder64(IntPtr encoder);
 
         private static bool Is64BitProcess => IntPtr.Size == 8;
+
+        private IntPtr intPtr;
+        private bool disposed = false;
 
         /// <summary>
         ///     Initializes the Apple Lossless audio encoder component with the current config. 
@@ -44,19 +47,19 @@ namespace LibALAC
         /// <param name="bitsPerSample">Bit depth of audio samples (16, 20, 24 or 32 bits).</param>
         /// <param name="framesPerPacket">Default number of audio frames per packet (ALAC default: 4096, AirPlay default: 352).</param>
         /// <param name="useFastMode">Encode with maximum possible speed but less compression</param>
-        public static void Initialize(int sampleRate, int channels, int bitsPerSample, int framesPerPacket, bool useFastMode)
+        public Encoder(int sampleRate, int channels, int bitsPerSample, int framesPerPacket, bool useFastMode = false)
         {
-            int result = Is64BitProcess ? InitializeEncoder64(sampleRate, channels, bitsPerSample, framesPerPacket, useFastMode) : InitializeEncoder32(sampleRate, channels, bitsPerSample, framesPerPacket, useFastMode);
-            if (result != 0)
+            intPtr = Is64BitProcess ? InitializeEncoder64(sampleRate, channels, bitsPerSample, framesPerPacket, useFastMode) : InitializeEncoder32(sampleRate, channels, bitsPerSample, framesPerPacket, useFastMode);
+            if (intPtr == null)
                 throw new LibALACException("InitializeEncoder failed.");
         }
 
         /// <summary>
         ///     Get the size of Apple lossless format "magic cookie" description.
         /// </summary>
-        public static int GetMagicCookieSize()
+        public int GetMagicCookieSize()
         {
-            int result = Is64BitProcess ? GetMagicCookieSize64() : GetMagicCookieSize32();
+            int result = Is64BitProcess ? GetMagicCookieSize64(intPtr) : GetMagicCookieSize32(intPtr);
             if (result > 0)
                 return result;
             throw new LibALACException("GetMagicCookieSize failed.");
@@ -65,11 +68,11 @@ namespace LibALAC
         /// <summary>
         ///     Get the Apple lossless codec specific information frame, often called the "magic cookie".
         /// </summary>
-        public static byte[] GetMagicCookie()
+        public byte[] GetMagicCookie()
         {
             int size = GetMagicCookieSize();
             byte[] outCookie = new byte[size];
-            if ((Is64BitProcess ? GetMagicCookie64(outCookie) : GetMagicCookie32(outCookie)) == 0)
+            if ((Is64BitProcess ? GetMagicCookie64(intPtr, outCookie) : GetMagicCookie32(intPtr, outCookie)) == 0)
                 return outCookie;
             throw new LibALACException("GetMagicCookie failed.");
         }
@@ -79,10 +82,10 @@ namespace LibALAC
         /// </summary>
         /// <param name="data">The data source.</param>
         /// <param name="count">Length of input data in bytes.</param>
-        public static byte[] Encode(byte[] data, int count)
+        public byte[] Encode(byte[] data, int count)
         {
             byte[] buffer = new byte[count + 7];
-            int result = Is64BitProcess ? Encode64(data, buffer, ref count) : Encode32(data, buffer, ref count);
+            int result = Is64BitProcess ? Encode64(intPtr, data, buffer, ref count) : Encode32(intPtr, data, buffer, ref count);
             if (result != 0)
                throw new LibALACException("Encode failed.");
             Array.Resize(ref buffer, count);
@@ -93,7 +96,7 @@ namespace LibALAC
         ///     Converts raw PCM input data into an Apple Lossless audio packet.
         /// </summary>
         /// <param name="data">The data source.</param>
-        public static byte[] Encode(byte[] data)
+        public byte[] Encode(byte[] data)
         {
             return Encode(data, data.Length);
         }
@@ -104,7 +107,7 @@ namespace LibALAC
         /// <param name="data">The data source.</param>
         /// <param name="offset">Input offset in bytes.</param>
         /// <param name="count">Length of input data in bytes.</param>
-        public static byte[] Encode(byte[] data, int offset, int count)
+        public byte[] Encode(byte[] data, int offset, int count)
         {
             byte[] buffer = new byte[count];
             Buffer.BlockCopy(data, offset, buffer, 0, count);
@@ -112,14 +115,23 @@ namespace LibALAC
         }
 
         /// <summary>
-        ///     Drain out any leftover samples and close encoder.
+        ///     Public implementation of Dispose pattern to drain out any leftover samples and close the unmanaged decoder.
         /// </summary>
-        public static void Finish()
+        public void Dispose()
         {
-            int result = Is64BitProcess ? FinishEncoder64() : FinishEncoder32();
-            if (result != 0)
-                throw new LibALACException("FinishEncoder failed.");
+            Dispose(true);
+            GC.SuppressFinalize(this);
         }
-        
+
+        /// <summary>
+        ///     Protected implementation of Dispose pattern. Drain out any leftover samples and close encoder.
+        /// </summary>
+        protected virtual void Dispose(bool disposing)
+        {
+            if (disposed)
+                return;
+            disposed = true;
+            int result = Is64BitProcess ? FinishEncoder64(intPtr) : FinishEncoder32(intPtr);
+        }
     }
 }

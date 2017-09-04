@@ -6,25 +6,28 @@ namespace LibALAC
     /// <summary>
     ///     .NET standard wrapper for the native dynamic-link library (DLL) implementation of the Apple Lossless Audio Codec (ALAC) decoder.
     /// </summary>
-    public static class Decoder
+    public class Decoder : IDisposable
     {
         [DllImport("LibALAC32.dll", EntryPoint = "InitializeDecoder", CallingConvention = CallingConvention.Cdecl)]
-        private static extern int InitializeDecoder32(int sampleRate, int channels, int bitsPerSample, int framesPerPacket);
+        private static extern IntPtr InitializeDecoder32(int sampleRate, int channels, int bitsPerSample, int framesPerPacket);
         [DllImport("LibALAC64.dll", EntryPoint = "InitializeDecoder", CallingConvention = CallingConvention.Cdecl)]
-        private static extern int InitializeDecoder64(int sampleRate, int channels, int bitsPerSample, int framesPerPacket);
+        private static extern IntPtr InitializeDecoder64(int sampleRate, int channels, int bitsPerSample, int framesPerPacket);
 
         [DllImport("LibALAC32.dll", EntryPoint = "Decode", CallingConvention = CallingConvention.Cdecl)]
-        private static extern int Decode32(byte[] readBuffer, byte[] writeBuffer, ref int ioNumBytes);
+        private static extern int Decode32(IntPtr decoder, byte[] readBuffer, byte[] writeBuffer, ref int ioNumBytes);
         [DllImport("LibALAC64.dll", EntryPoint = "Decode", CallingConvention = CallingConvention.Cdecl)]
-        private static extern int Decode64(byte[] readBuffer, byte[] writeBuffer, ref int ioNumBytes);
+        private static extern int Decode64(IntPtr decoder, byte[] readBuffer, byte[] writeBuffer, ref int ioNumBytes);
 
         [DllImport("LibALAC32.dll", EntryPoint = "FinishDecoder", CallingConvention = CallingConvention.Cdecl)]
-        private static extern int FinishDecoder32();
+        private static extern int FinishDecoder32(IntPtr decoder);
         [DllImport("LibALAC64.dll", EntryPoint = "FinishDecoder", CallingConvention = CallingConvention.Cdecl)]
-        private static extern int FinishDecoder64();
+        private static extern int FinishDecoder64(IntPtr decoder);
 
-        private static int DecoderBytesPerPacket;
         private static bool Is64BitProcess => IntPtr.Size == 8;
+
+        private IntPtr intPtr;
+        private bool disposed = false;
+        private int decoderBytesPerPacket;
 
         /// <summary>
         ///     Initializes the Apple Lossless audio decoder component with the current config. 
@@ -34,12 +37,12 @@ namespace LibALAC
         /// <param name="channels">Number of audio channels (1 = mono, 2 = stereo, etc.).</param>
         /// <param name="bitsPerSample">Bit depth of audio samples (16, 20, 24 or 32 bits).</param>
         /// <param name="framesPerPacket">Default number of audio frames per packet (ALAC default: 4096, AirPlay default: 352).</param>
-        public static void Initialize(int sampleRate, int channels, int bitsPerSample, int framesPerPacket)
+        public Decoder(int sampleRate, int channels, int bitsPerSample, int framesPerPacket)
         {
-            int result = Is64BitProcess ? InitializeDecoder64(sampleRate, channels, bitsPerSample, framesPerPacket) : InitializeDecoder32(sampleRate, channels, bitsPerSample, framesPerPacket);
-            if (result != 0)
+            intPtr = Is64BitProcess ? InitializeDecoder64(sampleRate, channels, bitsPerSample, framesPerPacket) : InitializeDecoder32(sampleRate, channels, bitsPerSample, framesPerPacket);
+            if (intPtr == null)
                 throw new LibALACException("InitializeDecoder failed.");
-            DecoderBytesPerPacket = (bitsPerSample != 20 ? channels * (bitsPerSample / 8) : (int)(bitsPerSample * 2.5 + .5)) * framesPerPacket;
+            decoderBytesPerPacket = (bitsPerSample != 20 ? channels * (bitsPerSample / 8) : (int)(bitsPerSample * 2.5 + .5)) * framesPerPacket;
         }
 
         /// <summary>
@@ -47,13 +50,13 @@ namespace LibALAC
         /// </summary>
         /// <param name="data">The data source.</param>
         /// <param name="count">Length of input data in bytes.</param>
-        public static byte[] Decode(byte[] data, int count)
+        public byte[] Decode(byte[] data, int count)
         {
-            byte[] buffer = new byte[DecoderBytesPerPacket];
-            int result = Is64BitProcess ? Decode64(data, buffer, ref count) : Decode32(data, buffer, ref count);
+            byte[] buffer = new byte[decoderBytesPerPacket];
+            int result = Is64BitProcess ? Decode64(intPtr, data, buffer, ref count) : Decode32(intPtr, data, buffer, ref count);
             if (result != 0)
                 throw new LibALACException("Decode failed.");
-            if (count < DecoderBytesPerPacket)
+            if (count < decoderBytesPerPacket)
                 Array.Resize(ref buffer, count);
             return buffer;
         }
@@ -62,7 +65,7 @@ namespace LibALAC
         ///     Converts an Apple Lossless audio packet into raw PCM output data.
         /// </summary>
         /// <param name="data">The data source.</param>
-        public static byte[] Decode(byte[] data)
+        public byte[] Decode(byte[] data)
         {
             return Decode(data, data.Length);
         }
@@ -73,7 +76,7 @@ namespace LibALAC
         /// <param name="data">The data source.</param>
         /// <param name="offset">Input offset in bytes.</param>
         /// <param name="count">Length of input data in bytes.</param>
-        public static byte[] Decode(byte[] data, int offset, int count)
+        public byte[] Decode(byte[] data, int offset, int count)
         {
             byte[] buffer = new byte[count];
             Buffer.BlockCopy(data, offset, buffer, 0, count);
@@ -81,14 +84,23 @@ namespace LibALAC
         }
 
         /// <summary>
-        ///     Close the decoder.
+        ///     Public implementation of Dispose pattern to close the unmanaged decoder.
         /// </summary>
-        public static void Finish()
+        public void Dispose()
         {
-            int result = Is64BitProcess ? FinishDecoder64() : FinishDecoder32();
-            if (result != 0)
-                throw new LibALACException("FinishDecoder failed.");
+            Dispose(true);
+            GC.SuppressFinalize(this);
         }
 
+        /// <summary>
+        ///     Protected implementation of Dispose pattern. Close the decoder.
+        /// </summary>
+        protected virtual void Dispose(bool disposing)
+        {
+            if (disposed)
+                return;
+            disposed = true;
+            int result = Is64BitProcess ? FinishDecoder64(intPtr) : FinishDecoder32(intPtr);
+        }
     }
 }

@@ -40,9 +40,9 @@ namespace Demo
 
         static void Main(string[] args)
         {
-            DateTime startTime = DateTime.Now;
-            LibALAC.Encoder.Initialize(SampleRate, Channels, BitsPerSample, FramesPerPacket, false);
-            LibALAC.Decoder.Initialize(SampleRate, Channels, BitsPerSample, FramesPerPacket);
+            DateTime StartTime = DateTime.Now;
+            LibALAC.Encoder encoder = new LibALAC.Encoder(SampleRate, Channels, BitsPerSample, FramesPerPacket);
+            LibALAC.Decoder decoder = new LibALAC.Decoder(SampleRate, Channels, BitsPerSample, FramesPerPacket);
             using (IWaveSource waveSource = CodecFactory.Instance.GetCodec(FileName))
             {
                 WaveFormat waveFormat = new WaveFormatExtensible(SampleRate, BitsPerSample, Channels, AudioSubTypes.Pcm);
@@ -52,8 +52,8 @@ namespace Demo
                     byte[] buffer = new byte[FramesPerPacket * Channels * (BitsPerSample / 8)];
                     while ((read = resampler.Read(buffer, 0, buffer.Length)) > 0)
                     {
-                        byte[] encoded = LibALAC.Encoder.Encode(buffer, read);
-                        byte[] decoded = LibALAC.Decoder.Decode(encoded);
+                        byte[] encoded = encoder.Encode(buffer, read);
+                        byte[] decoded = decoder.Decode(encoded);
                         if (read < buffer.Length)
                             Array.Resize(ref buffer, read);
                         if (!decoded.SequenceEqual(buffer))
@@ -61,19 +61,12 @@ namespace Demo
                     }
                 }
             }
-            LibALAC.Encoder.Finish();
-            LibALAC.Decoder.Finish();
-            Console.WriteLine("Encoding/Decoding-Time: " + DateTime.Now.Subtract(startTime));
+            Console.WriteLine("Encoding/Decoding-Time: " + DateTime.Now.Subtract(StartTime));
             Console.ReadLine();
         }
     }
 }
 ```
-
-### Why is LibALAC static? ###
-
-The official [ALAC codec](https://github.com/macosforge/alac) developed by Apple uses native C/C++ code resulting in a very fast but unmanaged LibALAC-DLL.
-This cannot easily wrapped in non-static, managed code for .NET.
 
 ### License ###
 	

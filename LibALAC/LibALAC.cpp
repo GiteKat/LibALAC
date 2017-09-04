@@ -6,138 +6,149 @@
 #include "ALACDecoder.h"
 #include "ALACBitUtilities.h"
 
-// DLL internal state variables:
-static ALACEncoder * encoder = NULL;
-static AudioFormatDescription encInputFormat;
-static AudioFormatDescription encOutputFormat;
-
-static ALACDecoder * decoder = NULL; 
-static int32_t decChannels;
-static int32_t decBytesPerFrame;
-static int32_t decFramesPerPacket;
-
-int InitializeEncoder(int sampleRate, int channels, int bitsPerSample, int framesPerPacket, bool useFastMode)
+struct EncoderInfo
 {
-	if (encoder != NULL)
-		return -1;
+	ALACEncoder * encoder;
+	AudioFormatDescription inputFormat;
+	AudioFormatDescription outputFormat;
+};
+
+struct DecoderInfo
+{
+	ALACDecoder * decoder;
+	int32_t channels;
+	int32_t bytesPerFrame;
+	int32_t framesPerPacket;
+};
+
+void* InitializeEncoder(int sampleRate, int channels, int bitsPerSample, int framesPerPacket, bool useFastMode)
+{
 	if (channels < 1 || channels > 8)
-		return -1;
-
-	encInputFormat.mSampleRate = sampleRate;
-	encOutputFormat.mSampleRate = sampleRate;
-
-	encInputFormat.mFormatID = kALACFormatLinearPCM;
-	encOutputFormat.mFormatID = kALACFormatAppleLossless;
-
-	encInputFormat.mFormatFlags = kALACFormatFlagsNativeEndian;
+		return NULL;
+	uint32_t flags;
 	switch (bitsPerSample)
 	{
-		case 16:
-			encOutputFormat.mFormatFlags = 1;
-			break;
-		case 20:
-			encOutputFormat.mFormatFlags = 2;
-			break;
-		case 24:
-			encOutputFormat.mFormatFlags = 3;
-			break;
-		case 32:
-			encOutputFormat.mFormatFlags = 4;
-			break;
-		default:
-			return -1;
-			break;
+	case 16:
+		flags = 1;
+		break;
+	case 20:
+		flags = 2;
+		break;
+	case 24:
+		flags = 3;
+		break;
+	case 32:
+		flags = 4;
+		break;
+	default:
+		return NULL;
+		break;
 	}
+
+	EncoderInfo * encoder = (EncoderInfo *)calloc(sizeof(EncoderInfo), 1);
+
+	encoder->inputFormat.mSampleRate = sampleRate;
+	encoder->outputFormat.mSampleRate = sampleRate;
+
+	encoder->inputFormat.mFormatID = kALACFormatLinearPCM;
+	encoder->outputFormat.mFormatID = kALACFormatAppleLossless;
+
+	encoder->inputFormat.mFormatFlags = kALACFormatFlagsNativeEndian;
+	encoder->outputFormat.mFormatFlags = flags;
 	
-	encInputFormat.mBytesPerPacket = bitsPerSample != 20 ? channels * (bitsPerSample >> 3) : (int32_t)(bitsPerSample * 2.5 + .5);
-	encOutputFormat.mBytesPerPacket = 0;
+	encoder->inputFormat.mBytesPerPacket = bitsPerSample != 20 ? channels * (bitsPerSample >> 3) : (int32_t)(bitsPerSample * 2.5 + .5);
+	encoder->outputFormat.mBytesPerPacket = 0;
 
-	encInputFormat.mFramesPerPacket = 1;
-	encOutputFormat.mFramesPerPacket = framesPerPacket;
+	encoder->inputFormat.mFramesPerPacket = 1;
+	encoder->outputFormat.mFramesPerPacket = framesPerPacket;
 
-	encInputFormat.mBytesPerFrame = encInputFormat.mBytesPerPacket;
-	encOutputFormat.mBytesPerFrame = 0;
+	encoder->inputFormat.mBytesPerFrame = encoder->inputFormat.mBytesPerPacket;
+	encoder->outputFormat.mBytesPerFrame = 0;
 
-	encInputFormat.mChannelsPerFrame = channels;
-	encOutputFormat.mChannelsPerFrame = channels;
+	encoder->inputFormat.mChannelsPerFrame = channels;
+	encoder->outputFormat.mChannelsPerFrame = channels;
 
-	encInputFormat.mBitsPerChannel = bitsPerSample;
-	encOutputFormat.mBitsPerChannel = 0;
+	encoder->inputFormat.mBitsPerChannel = bitsPerSample;
+	encoder->outputFormat.mBitsPerChannel = 0;
 
-	encInputFormat.mReserved = 0;
-	encOutputFormat.mReserved = 0;
+	encoder->inputFormat.mReserved = 0;
+	encoder->outputFormat.mReserved = 0;
 
-	encoder = new ALACEncoder;
-	encoder->SetFastMode(useFastMode);
-	encoder->SetFrameSize(encOutputFormat.mFramesPerPacket);
-	return encoder->InitializeEncoder(encOutputFormat);
+	encoder->encoder = new ALACEncoder;
+	encoder->encoder->SetFastMode(useFastMode);
+	encoder->encoder->SetFrameSize(encoder->outputFormat.mFramesPerPacket);
+	encoder->encoder->InitializeEncoder(encoder->outputFormat);
+
+	return encoder;
 }
 
-int GetMagicCookieSize()
+int GetMagicCookieSize(void* encoder)
 {
 	if (encoder == NULL)
 		return -1;
-	return encoder->GetMagicCookieSize(encOutputFormat.mChannelsPerFrame);
+	return ((EncoderInfo *)encoder)->encoder->GetMagicCookieSize(((EncoderInfo *)encoder)->outputFormat.mChannelsPerFrame);
 }
 
-int GetMagicCookie(unsigned char * outCookie)
+int GetMagicCookie(void* encoder, unsigned char * outCookie)
 {
 	if (encoder == NULL)
 		return -1;
 	uint32_t ioNumBytes;
-	encoder->GetMagicCookie(outCookie, &ioNumBytes);
+	((EncoderInfo *)encoder)->encoder->GetMagicCookie(outCookie, &ioNumBytes);
 	return ioNumBytes;
 }
 
-int Encode(unsigned char * inBuffer, unsigned char * outBuffer, int * ioNumBytes)
+int Encode(void* encoder, unsigned char * inBuffer, unsigned char * outBuffer, int * ioNumBytes)
 {
 	if (encoder == NULL)
 		return -1;
-	return encoder->Encode(encInputFormat, encOutputFormat, inBuffer, outBuffer, ioNumBytes);
+	return ((EncoderInfo *)encoder)->encoder->Encode(((EncoderInfo *)encoder)->inputFormat, ((EncoderInfo *)encoder)->outputFormat, inBuffer, outBuffer, ioNumBytes);
 }
 
-int FinishEncoder()
+int FinishEncoder(void* encoder)
 {
 	if (encoder == NULL)
 		return -1;
-	int32_t result = encoder->Finish();
-	delete encoder;
-	encoder = NULL;
+	int32_t result = ((EncoderInfo *)encoder)->encoder->Finish();
+	delete ((EncoderInfo *)encoder)->encoder;
+	free(encoder);
 	return result;
 }
 
-int InitializeDecoder(int sampleRate, int channels, int bitsPerSample, int framesPerPacket)
+void* InitializeDecoder(int sampleRate, int channels, int bitsPerSample, int framesPerPacket)
 {
-	if (decoder != NULL)
-		return -1;
 	if (channels < 1 || channels > 8)
-		return -1;
+		return NULL;
+	uint32_t flags;
+	switch (bitsPerSample)
+	{
+	case 16:
+		flags = 1;
+		break;
+	case 20:
+		flags = 2;
+		break;
+	case 24:
+		flags = 3;
+		break;
+	case 32:
+		flags = 4;
+		break;
+	default:
+		return NULL;
+		break;
+	}
 
-	decChannels = channels;
-	decBytesPerFrame = bitsPerSample != 20 ? channels * (bitsPerSample >> 3) : (int32_t)(bitsPerSample * 2.5 + .5);
-	decFramesPerPacket = framesPerPacket;
+	DecoderInfo * decoder = (DecoderInfo *)calloc(sizeof(DecoderInfo), 1);
+
+	decoder->channels = channels;
+	decoder->bytesPerFrame = bitsPerSample != 20 ? channels * (bitsPerSample >> 3) : (int32_t)(bitsPerSample * 2.5 + .5);
+	decoder->framesPerPacket = framesPerPacket;
 
 	AudioFormatDescription format;
 	format.mSampleRate = sampleRate;
 	format.mFormatID = kALACFormatAppleLossless;
-	switch (bitsPerSample)
-	{
-		case 16:
-			format.mFormatFlags = 1;
-			break;
-		case 20:
-			format.mFormatFlags = 2;
-			break;
-		case 24:
-			format.mFormatFlags = 3;
-			break;
-		case 32:
-			format.mFormatFlags = 4;
-			break;
-		default:
-			return -1;
-			break;
-	}
+	format.mFormatFlags = flags;
 	format.mBytesPerPacket = 0;
 	format.mFramesPerPacket = framesPerPacket;
 	format.mBytesPerFrame = 0;
@@ -153,29 +164,29 @@ int InitializeDecoder(int sampleRate, int channels, int bitsPerSample, int frame
 	_encoder->GetMagicCookie(theMagicCookie, &theMagicCookieSize);
 	delete _encoder;
 
-	decoder = new ALACDecoder;
-	int32_t result = decoder->Init(theMagicCookie, theMagicCookieSize);
+	decoder->decoder = new ALACDecoder;
+	int32_t result = decoder->decoder->Init(theMagicCookie, theMagicCookieSize);
 	free(theMagicCookie);
-	return result;
+	return decoder;
 }
 
-int Decode(unsigned char * inBuffer, unsigned char * outBuffer, int * ioNumBytes)
+int Decode(void* decoder, unsigned char * inBuffer, unsigned char * outBuffer, int * ioNumBytes)
 {
 	if (decoder == NULL)
 		return -1;
 	BitBuffer bitBuffer;
 	BitBufferInit(&bitBuffer, inBuffer, *ioNumBytes);
 	uint32_t numFrames;
-	int32_t result = decoder->Decode(&bitBuffer, outBuffer, decFramesPerPacket, decChannels, &numFrames);
-	*ioNumBytes = numFrames * decBytesPerFrame;
+	int32_t result = ((DecoderInfo *)decoder)->decoder->Decode(&bitBuffer, outBuffer, ((DecoderInfo *)decoder)->framesPerPacket, ((DecoderInfo *)decoder)->channels, &numFrames);
+	*ioNumBytes = numFrames * ((DecoderInfo *)decoder)->bytesPerFrame;
 	return result;
 }
 
-int FinishDecoder()
+int FinishDecoder(void* decoder)
 {
 	if (decoder == NULL)
 		return -1;
-	delete decoder;
-	decoder = NULL;
+	delete ((DecoderInfo *)decoder)->decoder;
+	free(decoder);
 	return 0;
 }
