@@ -23,7 +23,25 @@ namespace LibALAC
         [DllImport("LibALAC64.dll", EntryPoint = "FinishDecoder", CallingConvention = CallingConvention.Cdecl)]
         private static extern int FinishDecoder64(IntPtr decoder);
 
+        [DllImport("LibALAC32.dll", EntryPoint = "ParseMagicCookie", CallingConvention = CallingConvention.Cdecl)]
+        private static extern int ParseMagicCookie32(byte[] inMagicCookie, int inMagicCookieSize, ref int outSampleRate, ref int outChannels, ref int outBitsPerSample, ref int outFramesPerPacket);
+        [DllImport("LibALAC64.dll", EntryPoint = "ParseMagicCookie", CallingConvention = CallingConvention.Cdecl)]
+        private static extern int ParseMagicCookie64(byte[] inMagicCookie, int inMagicCookieSize, ref int outSampleRate, ref int outChannels, ref int outBitsPerSample, ref int outFramesPerPacket);
+
         private static bool Is64BitProcess => IntPtr.Size == 8;
+
+        /// <summary>
+        ///     Get audio format description out of an Apple lossless "magic cookie".
+        /// </summary>
+        /// <param name="inMagicCookie">The magic cookie data.</param>
+        /// <param name="outSampleRate">Number of samples of audio carried per second (e.g. 44100, 48000).</param>
+        /// <param name="outChannels">Number of audio channels (1 = mono, 2 = stereo, etc.).</param>
+        /// <param name="outBitsPerSample">Bit depth of audio samples (16, 20, 24 or 32 bits).</param>
+        /// <param name="outFramesPerPacket">Default number of audio frames per packet.</param>
+        public static int ParseMagicCookie(byte[] inMagicCookie, ref int outSampleRate, ref int outChannels, ref int outBitsPerSample, ref int outFramesPerPacket)
+        {
+            return Is64BitProcess ? ParseMagicCookie64(inMagicCookie, inMagicCookie.Length, ref outSampleRate, ref outChannels, ref outBitsPerSample, ref outFramesPerPacket) : ParseMagicCookie32(inMagicCookie, inMagicCookie.Length, ref outSampleRate, ref outChannels, ref outBitsPerSample, ref outFramesPerPacket);
+        }
 
         private IntPtr intPtr;
         private bool disposed = false;
@@ -31,7 +49,6 @@ namespace LibALAC
 
         /// <summary>
         ///     Initializes the Apple Lossless audio decoder component with the current config. 
-        ///     This function must be called before any other decoder method.
         /// </summary>
         /// <param name="sampleRate">Number of samples of audio carried per second (e.g. 44100, 48000).</param>
         /// <param name="channels">Number of audio channels (1 = mono, 2 = stereo, etc.).</param>

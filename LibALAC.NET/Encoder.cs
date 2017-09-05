@@ -40,7 +40,6 @@ namespace LibALAC
 
         /// <summary>
         ///     Initializes the Apple Lossless audio encoder component with the current config. 
-        ///     This function must be called before any other encoder method.
         /// </summary>
         /// <param name="sampleRate">Number of samples of audio carried per second (e.g. 44100, 48000).</param>
         /// <param name="channels">Number of audio channels (1 = mono, 2 = stereo, etc.).</param>
@@ -72,9 +71,10 @@ namespace LibALAC
         {
             int size = GetMagicCookieSize();
             byte[] outCookie = new byte[size];
-            if ((Is64BitProcess ? GetMagicCookie64(intPtr, outCookie) : GetMagicCookie32(intPtr, outCookie)) == 0)
-                return outCookie;
-            throw new LibALACException("GetMagicCookie failed.");
+            int len = Is64BitProcess ? GetMagicCookie64(intPtr, outCookie) : GetMagicCookie32(intPtr, outCookie);
+            if (len != size)
+                throw new LibALACException("GetMagicCookie failed.");
+            return outCookie;
         }
 
         /// <summary>
