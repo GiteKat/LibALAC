@@ -14,7 +14,7 @@
     <PackageTags>ALAC Encoder Decoder .NET Apple Lossless Audio Codec</PackageTags>
     <AssemblyName>LibALAC</AssemblyName>
     <RootNamespace>LibALAC</RootNamespace>
-    <Version>1.0.6</Version>
+    <Version>1.0.7</Version>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">

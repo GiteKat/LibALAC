@@ -62,7 +62,7 @@ void* InitializeEncoder(int sampleRate, int channels, int bitsPerSample, int fra
 	encoder->inputFormat.mFormatFlags = kALACFormatFlagsNativeEndian;
 	encoder->outputFormat.mFormatFlags = flags;
 	
-	encoder->inputFormat.mBytesPerPacket = bitsPerSample != 20 ? channels * (bitsPerSample >> 3) : (int32_t)(bitsPerSample * 2.5 + .5);
+	encoder->inputFormat.mBytesPerPacket = bitsPerSample != 20 ? channels * (bitsPerSample >> 3) : (int32_t)(channels * 2.5 + .5);
 	encoder->outputFormat.mBytesPerPacket = 0; // because we are VBR
 
 	encoder->inputFormat.mFramesPerPacket = 1;
@@ -136,7 +136,7 @@ void* InitializeDecoder(int sampleRate, int channels, int bitsPerSample, int fra
 	DecoderInfo * decoder = (DecoderInfo *)calloc(sizeof(DecoderInfo), 1);
 
 	decoder->channels = channels;
-	decoder->bytesPerFrame = bitsPerSample != 20 ? channels * (bitsPerSample >> 3) : (int32_t)(bitsPerSample * 2.5 + .5);
+	decoder->bytesPerFrame = bitsPerSample != 20 ? channels * (bitsPerSample >> 3) : (int32_t)(channels * 2.5 + .5);
 	decoder->framesPerPacket = framesPerPacket;
 
 	AudioFormatDescription format;
@@ -180,7 +180,7 @@ void* InitializeDecoderWithCookie(void * inMagicCookie, int inMagicCookieSize)
 		return NULL;
 	DecoderInfo * decoder = (DecoderInfo *)calloc(sizeof(DecoderInfo), 1);
 	decoder->channels = channels;
-	decoder->bytesPerFrame = bitsPerSample != 20 ? channels * (bitsPerSample >> 3) : (int32_t)(bitsPerSample * 2.5 + .5);
+	decoder->bytesPerFrame = bitsPerSample != 20 ? channels * (bitsPerSample >> 3) : (int32_t)(channels * 2.5 + .5);
 	decoder->framesPerPacket = framesPerPacket;
 	decoder->decoder = new ALACDecoder;
 	int32_t result = decoder->decoder->Init(inMagicCookie, inMagicCookieSize);

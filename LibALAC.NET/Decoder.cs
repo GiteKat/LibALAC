@@ -84,7 +84,7 @@ namespace LibALAC
             this.channels = channels;
             this.bitsPerSample = bitsPerSample;
             this.framesPerPacket = framesPerPacket;
-            bytesPerPacket = (bitsPerSample != 20 ? channels * (bitsPerSample / 8) : (int)(bitsPerSample * 2.5 + .5)) * framesPerPacket;
+            bytesPerPacket = (bitsPerSample != 20 ? channels * (bitsPerSample / 8) : (int)(channels * 2.5 + .5)) * framesPerPacket;
         }
 
         /// <summary>
@@ -101,7 +101,7 @@ namespace LibALAC
             bitsPerSample = 0;
             framesPerPacket = 0;
             ParseMagicCookie(inMagicCookie, ref sampleRate, ref channels, ref bitsPerSample, ref framesPerPacket);
-            bytesPerPacket = (bitsPerSample != 20 ? channels * (bitsPerSample / 8) : (int)(bitsPerSample * 2.5 + .5)) * framesPerPacket;
+            bytesPerPacket = (bitsPerSample != 20 ? channels * (bitsPerSample / 8) : (int)(channels * 2.5 + .5)) * framesPerPacket;
         }
 
         /// <summary>
