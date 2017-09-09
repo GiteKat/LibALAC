@@ -50,8 +50,8 @@ namespace Demo
                 using (DmoResampler resampler = new DmoResampler(waveSource, waveFormat))
                 {
                     int read;
-                    byte[] buffer = new byte[FramesPerPacket * Channels * (BitsPerSample / 8)];
-                    while ((read = resampler.Read(buffer, 0, buffer.Length)) > 0)
+                    byte[] buffer = new byte[encoder.BytesPerPacket];
+                    while ((read = resampler.Read(buffer, 0, encoder.BytesPerPacket)) > 0)
                     {
                         byte[] encoded = encoder.Encode(buffer, read);
                         byte[] decoded = decoder.Decode(encoded);

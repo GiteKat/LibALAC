@@ -164,6 +164,29 @@ void* InitializeDecoder(int sampleRate, int channels, int bitsPerSample, int fra
 	return decoder;
 }
 
+void* InitializeDecoderWithCookie(void * inMagicCookie, int inMagicCookieSize)
+{
+	int sampleRate, channels, bitsPerSample, framesPerPacket;
+	if (ParseMagicCookie(inMagicCookie, inMagicCookieSize, &sampleRate, &channels, &bitsPerSample, &framesPerPacket) != 0)
+		return NULL;
+	if (sampleRate < 1)
+		return NULL;
+	if (channels < 1 || channels > 8)
+		return NULL;
+	uint32_t flags = bitsToFlags(bitsPerSample);
+	if (flags == 0)
+		return NULL;
+	if (framesPerPacket < 1)
+		return NULL;
+	DecoderInfo * decoder = (DecoderInfo *)calloc(sizeof(DecoderInfo), 1);
+	decoder->channels = channels;
+	decoder->bytesPerFrame = bitsPerSample != 20 ? channels * (bitsPerSample >> 3) : (int32_t)(bitsPerSample * 2.5 + .5);
+	decoder->framesPerPacket = framesPerPacket;
+	decoder->decoder = new ALACDecoder;
+	int32_t result = decoder->decoder->Init(inMagicCookie, inMagicCookieSize);
+	return decoder;
+}
+
 int Decode(void* decoder, unsigned char * inBuffer, unsigned char * outBuffer, int * ioNumBytes)
 {
 	if (decoder == NULL)

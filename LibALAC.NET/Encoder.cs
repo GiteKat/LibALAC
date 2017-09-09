@@ -35,6 +35,37 @@ namespace LibALAC
 
         private static bool Is64BitProcess => IntPtr.Size == 8;
 
+        /// <summary>
+        ///     Number of samples of audio carried per second (e.g. 44100, 48000).
+        /// </summary>
+        public int SampleRate => sampleRate;
+
+        /// <summary>
+        ///     Number of audio channels (1 = mono, 2 = stereo, etc.).
+        /// </summary>
+        public int Channels => channels;
+
+        /// <summary>
+        ///     Bit depth of audio samples (16, 20, 24 or 32 bits).
+        /// </summary>
+        public int BitsPerSample => bitsPerSample;
+
+        /// <summary>
+        ///     Default number of audio frames per packet.
+        /// </summary>
+        public int FramesPerPacket => framesPerPacket;
+
+        /// <summary>
+        ///    Default size of one PCM input packet.
+        /// </summary>
+        public int BytesPerPacket => bytesPerPacket;
+
+        private int sampleRate;
+        private int channels;
+        private int bitsPerSample;
+        private int framesPerPacket;
+        private int bytesPerPacket;
+
         private IntPtr intPtr;
         private bool disposed = false;
 
@@ -51,6 +82,11 @@ namespace LibALAC
             intPtr = Is64BitProcess ? InitializeEncoder64(sampleRate, channels, bitsPerSample, framesPerPacket, useFastMode) : InitializeEncoder32(sampleRate, channels, bitsPerSample, framesPerPacket, useFastMode);
             if (intPtr == null)
                 throw new LibALACException("InitializeEncoder failed.");
+            this.sampleRate = sampleRate;
+            this.channels = channels;
+            this.bitsPerSample = bitsPerSample;
+            this.framesPerPacket = framesPerPacket;
+            bytesPerPacket = (bitsPerSample != 20 ? channels * (bitsPerSample / 8) : (int)(bitsPerSample * 2.5 + .5)) * framesPerPacket;
         }
 
         /// <summary>

@@ -25,6 +25,9 @@ extern "C" LIBALAC_API int FinishEncoder(void* encoder);
 // Decoder-Constructor 
 extern "C" LIBALAC_API void* InitializeDecoder(int sampleRate, int channels, int bitsPerSample, int framesPerPacket);
 
+// Decoder-Constructor 
+extern "C" LIBALAC_API void* InitializeDecoderWithCookie(void * inMagicCookie, int inMagicCookieSize);
+
 // Decode the next block of samples
 extern "C" LIBALAC_API int Decode(void* decoder, unsigned char * inBuffer, unsigned char * outBuffer, int * ioNumBytes);
 
